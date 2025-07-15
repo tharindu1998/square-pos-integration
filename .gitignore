@@ -1,0 +1,13 @@
+# IDE/editor files
+.vscode/
+
+# Environment variables
+.env
+.env.*
+
+# Output of the go build command
+*.out
+
+# Go build cache and modules
+bin/
+build/
