@@ -1,28 +1,23 @@
 package models
 
-import (
-	"time"
+import(
 	"gorm.io/gorm"
+	"time"
 	
 )
 
 type Order struct {
-	gorm.Model
-	RestaurantID uint      `json:"-"`            // FK to Restaurant
-	SquareOrderID     string    `json:"square_id"`    // Square cloud order id
-	TableNumber  string    `json:"table"`        
-	IsClosed     bool      `json:"is_closed"`
-	OpenedAt     time.Time `json:"opened_at"`
+	*gorm.Model
 
-	Items    []Item    `json:"items" gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	Payments []Payment `json:"payments"`
+	SquareOrderID string     `json:"square_order_id" gorm:"uniqueIndex"`
+	RestaurantID  uint       `json:"restaurant_id"  gorm:"not null;index"`
+	TableNumber   string     `json:"table_number"`
+	Status        string     `json:"status"         gorm:"type:enum('open','closed','cancelled');default:'open';index"`
+	OpenedAt      time.Time  `json:"opened_at"`
+	ClosedAt      *time.Time `json:"closed_at"`
 
-
-	DiscountTotal    int64 `json:"discounts"`
-	TaxTotal         int64 `json:"tax"`
-	ServiceCharge    int64 `json:"service_charge"`
-	TipTotal         int64 `json:"tips"`
-	PaidTotal        int64 `json:"paid"`
-	DueTotal         int64 `json:"due"`
-	GrandTotal       int64 `json:"total"`
+	/* relationships */
+	Restaurant Restaurant `json:"-" gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	OrderItems []OrderItem `json:"items"     gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	Payments   []Payment   `json:"payments"  gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 }
