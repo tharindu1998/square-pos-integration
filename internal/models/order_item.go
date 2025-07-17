@@ -7,17 +7,25 @@ import (
 type OrderItem struct {
 	*gorm.Model
 
-	OrderID      uint   `json:"order_id"      gorm:"not null;index"`
-	SquareItemID string `json:"square_item_id" gorm:"index"`
-	Name         string `json:"name"          gorm:"not null"`
-	Comment      string `json:"comment"`
-
-	UnitPrice int64 `json:"unit_price"`             // per‑unit price, cents
-	Quantity  int   `json:"quantity"    gorm:"default:1"`
-	Amount    int64 `json:"amount"`                 // total for this item line, cents
+	OrderID   string `json:"order_id" gorm:"not null;size:255;index"`
+	Name      string `json:"name" gorm:"not null;size:255"`
+	Comment   string `json:"comment" gorm:"size:500"`
+	UnitPrice int64    `json:"unit_price" gorm:"not null"` 
+	Quantity  int    `json:"quantity" gorm:"not null"`
+	Amount    int    `json:"amount" gorm:"not null"` 
+	
+	
+	// Square specific fields for syncing
+	SquareItemID string `json:"square_item_id" gorm:"size:255"`
+	SquareUID    string `json:"square_uid" gorm:"size:255"`
 
 	/* relationships */
 	Order      Order               `json:"-" gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	Discounts  []OrderItemDiscount `json:"discounts" gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	Modifiers  []OrderItemModifier `json:"modifiers" gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+}
+
+// TableName returns the table name for OrderItem model
+func (OrderItem) TableName() string {
+	return "order_items"
 }

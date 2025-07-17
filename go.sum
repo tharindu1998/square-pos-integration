@@ -63,6 +63,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/square/square-go-sdk v1.5.0 h1:BCLixHo9rBEyWhM6fR6oJl+bTuEZZ+C/407VJjslVSk=
 github.com/square/square-go-sdk v1.5.0/go.mod h1:kmGZS8W7V9QrM/bgYfSCaPw6FsPRlhjHiHqVKtVqo20=
+github.com/square/square-go-sdk/v2 v2.0.0 h1:UUDT9D0qW9+hOmZ3rXiH+Hj/V5tk9NfUZSDSBf4WDlo=
+github.com/square/square-go-sdk/v2 v2.0.0/go.mod h1:QNsYs/9u172TdPMmqhudSNxVZATKjvgBkbgSo6Rqf7Y=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSSt89Yw=
 github.com/stretchr/objx v0.5.0/go.mod h1:Yh+to48EsGEfYuaHDzXPcE3xhTkx73EhmCGUpEOglKo=

@@ -7,12 +7,20 @@ import (
 type OrderItemDiscount struct {
 	gorm.Model
 
-	OrderItemID  uint   `json:"order_item_id" gorm:"not null;index"`
-	Name         string `json:"name"          gorm:"not null"`
+OrderItemID  uint   `json:"order_item_id" gorm:"not null;index"`
+	Name         string `json:"name" gorm:"not null;size:255"`
 	IsPercentage bool   `json:"is_percentage" gorm:"default:false"`
-	Value        int64  `json:"value"`   // raw value (cents or %)
-	Amount       int64  `json:"amount"`  // applied amount, cents
+	Value        int    `json:"value" gorm:"not null"` // Value in cents or percentage
+	Amount       int    `json:"amount" gorm:"not null"` // Applied amount in cents
+	
+	// Square specific fields
+	SquareDiscountUID string `json:"square_discount_uid" gorm:"size:255"`
+	
+	// Relationships
+	OrderItem OrderItem `json:"order_item,omitempty" gorm:"foreignKey:OrderItemID"`
+}
 
-	/* relationships */
-	OrderItem OrderItem `json:"-" gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+// TableName returns the table name for OrderItemDiscount model
+func (OrderItemDiscount) TableName() string {
+	return "order_item_discounts"
 }

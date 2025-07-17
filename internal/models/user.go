@@ -7,12 +7,18 @@ import(
 type User struct {
 	gorm.Model
 
-	Email        string `json:"email"         gorm:"not null;uniqueIndex"`
-	PasswordHash string `json:"-"             gorm:"not null"`          // keep secret
+	Username     string `json:"username" gorm:"not null;uniqueIndex;size:100"`
+	Email        string `json:"email" gorm:"not null;uniqueIndex;size:255"`
+	PasswordHash string `json:"-" gorm:"not null;size:255"`
 	RestaurantID uint   `json:"restaurant_id" gorm:"not null;index"`
+	Role         string `json:"role" gorm:"not null;size:50;default:staff"`
+	IsActive     bool   `json:"is_active" gorm:"default:true"`
+	
+	// Relationships
+	Restaurant Restaurant `json:"restaurant,omitempty" gorm:"foreignKey:RestaurantID"`
+}
 
-	Role string `json:"role" gorm:"type:enum('admin','manager','staff');default:'staff'"`
-
-	/* relationships */
-	Restaurant Restaurant `json:"restaurant,omitempty" gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+// TableName returns the table name for User model
+func (User) TableName() string {
+	return "users"
 }
