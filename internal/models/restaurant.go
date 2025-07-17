@@ -9,7 +9,7 @@ type Restaurant struct {
 	gorm.Model
 
 	Name        string `json:"name"          gorm:"not null"`
-	SquareAppID string `json:"square_app_id" gorm:"uniqueIndex;not null"`
+	SquareAppID string `gorm:"type:varchar(255);uniqueIndex"`
 	SquareToken string `json:"-"             gorm:"not null"` 
 	MerchantID    string `json:"merchant_id" gorm:"not null"`                     
 	LocationID    string `json:"location_id" gorm:"not null"`                     

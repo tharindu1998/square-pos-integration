@@ -1,24 +1,29 @@
 package controllers
 
 import (
+	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
+	"time"
 
+	"github.com/gin-gonic/gin"
+	"gorm.io/datatypes"
+	"gorm.io/gorm"
 	"square-pos-integration/internal/models"
 	"square-pos-integration/internal/requests"
 	"square-pos-integration/internal/service"
+	"square-pos-integration/internal/utils"
 )
 
 type OrderController struct {
-	DB           *gorm.DB
+	DB            *gorm.DB
 	SquareService *service.SquareService
 }
 
 func NewOrderController(db *gorm.DB, squareService *service.SquareService) *OrderController {
 	return &OrderController{
-		DB:           db,
+		DB:            db,
 		SquareService: squareService,
 	}
 }
@@ -42,16 +47,21 @@ func (oc *OrderController) CreateOrder(c *gin.Context) {
 	}
 
 	// Create order in local DB with full persistence
+
+	jsonBytes, err := json.Marshal(squareOrder)
+	if err != nil {
+		log.Printf("Failed to marshal Square order: %v", err)
+	}
 	order := models.Order{
-		SquareOrderID: squareOrder.ID,
+		SquareOrderID: utils.SafeString(squareOrder.ID),
 		RestaurantID:  restaurantID.(uint),
 		UserID:        userID.(uint),
 		TableNumber:   orderRequest.TableNumber,
 		Status:        "pending",
-		TotalAmount:   squareOrder.TotalMoney.Amount,
-		Currency:      squareOrder.TotalMoney.Currency,
+		TotalAmount:   utils.SafeInt64(squareOrder.TotalMoney.Amount),
+		Currency:      utils.SafeCurrency(squareOrder.TotalMoney.Currency),
 		LocationID:    orderRequest.LocationID,
-		RawSquareData: squareOrder, // Store complete Square response
+		RawSquareData: datatypes.JSON(jsonBytes), // Store complete Square response
 	}
 
 	if err := oc.DB.Create(&order).Error; err != nil {
@@ -63,17 +73,16 @@ func (oc *OrderController) CreateOrder(c *gin.Context) {
 	for _, lineItem := range squareOrder.LineItems {
 		orderItem := models.OrderItem{
 			OrderID:      strconv.FormatUint(uint64(order.ID), 10),
-			Name:         lineItem.Name,
-			UnitPrice:    lineItem.ItemType.BasePriceMoney.Amount,
-			Quantity:     lineItem.Quantity,
-			Amount:       lineItem.TotalMoney.Amount,
-			SquareItemID: *lineItem.CatalogObjectId,
-			SquareUID:    lineItem.Uid,
-		}
+			Name:         utils.SafeString(lineItem.Name),
+			UnitPrice:    utils.SafeInt64(lineItem.BasePriceMoney.Amount),
+			Quantity:     utils.ParseQuantity(lineItem.Quantity),
+			Amount:       int(utils.SafeInt64(lineItem.TotalMoney.Amount)),
+			SquareItemID: utils.SafeString(lineItem.CatalogObjectID),
+			SquareUID:    utils.SafeString(lineItem.UID)}
 		oc.DB.Create(&orderItem)
 	}
 	c.JSON(http.StatusCreated, gin.H{
-		"order": order,
+		"order":        order,
 		"square_order": squareOrder,
 	})
 }
@@ -111,36 +120,51 @@ func (oc *OrderController) SubmitPayment(c *gin.Context) {
 	orderID := c.Param("id")
 	restaurantID, _ := c.Get("restaurant_id")
 
-	var paymentRequest requests.CreateOrderRequest
+	// Bind JSON into SubmitPaymentRequest (not CreateOrderRequest)
+	var paymentRequest requests.SubmitPaymentRequest
 	if err := c.ShouldBindJSON(&paymentRequest); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Get order from DB
+	// Retrieve order from DB
 	var order models.Order
 	if err := oc.DB.Where("id = ? AND restaurant_id = ?", orderID, restaurantID).First(&order).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
 		return
 	}
 
-	// Submit payment to Square
-	payment, err := oc.SquareService.SubmitPayment(restaurantID.(uint), order.SquareOrderID, paymentRequest)
+	// Submit payment via Square
+	payment, err := oc.SquareService.SubmitPayment(
+		restaurantID.(uint),
+		order.SquareOrderID,
+		paymentRequest,
+	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process payment: " + err.Error()})
 		return
 	}
 
-	// Persist payment record in DB
+	// Parse CreatedAt (ISO8601 string to time.Time)
+	parsedCreatedAt, err := time.Parse(time.RFC3339, utils.SafeString(payment.CreatedAt))
+	if err != nil {
+		parsedCreatedAt = time.Time{} // fallback zero time
+	}
+
+	jsonBytes, err := json.Marshal(payment)
+	if err != nil {
+		log.Printf("Failed to marshal Square order: %v", err)
+	}
+	// Save payment to DB
 	paymentRecord := models.Payment{
-		OrderID:        strconv.FormatUint(uint64(order.ID), 10),
-		SquarePaymentID: payment.ID,
-		BillAmount:         payment.AmountMoney.Amount,
-		Currency:       payment.AmountMoney.Currency,
-		Status:         payment.Status,
-		PaymentMethod:  paymentRequest.PaymentMethod,
-		ProcessedAt:    payment.CreatedAt,
-		RawSquareData:  payment,
+		OrderID:         strconv.FormatUint(uint64(order.ID), 10),
+		SquarePaymentID: utils.SafeString(payment.ID),
+		BillAmount:      int(utils.SafeInt64(payment.AmountMoney.Amount)),
+		Currency:        utils.SafeCurrency(payment.AmountMoney.Currency),
+		Status:          utils.SafeString(payment.Status),
+		PaymentMethod:   paymentRequest.PaymentMethod,
+		ProcessedAt:     parsedCreatedAt,
+		RawSquareData:   datatypes.JSON(jsonBytes),
 	}
 
 	if err := oc.DB.Create(&paymentRecord).Error; err != nil {
@@ -148,15 +172,18 @@ func (oc *OrderController) SubmitPayment(c *gin.Context) {
 		return
 	}
 
-	// Update order status and payment info in DB
+	// Update order status and link payment record
 	order.Status = "paid"
-	order.PayedAmount = payment.AmountMoney.Amount
-	order.PaymentID = &paymentRecord.ID
+	order.PayedAmount = utils.SafeInt64(payment.AmountMoney.Amount)
+	str := strconv.FormatUint(uint64(paymentRecord.ID), 10)
+	order.PaymentID = str
+
 	if err := oc.DB.Save(&order).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update order status"})
 		return
 	}
 
+	// Return response
 	c.JSON(http.StatusOK, gin.H{
 		"payment": paymentRecord,
 		"order":   order,

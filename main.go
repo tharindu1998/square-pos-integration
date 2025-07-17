@@ -5,7 +5,6 @@ import (
     "log"
     "square-pos-integration/internal/config"
     "square-pos-integration/internal/routes"
-
     "github.com/gin-gonic/gin"
     "github.com/joho/godotenv"
 )
