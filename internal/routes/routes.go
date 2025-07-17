@@ -11,8 +11,8 @@ import (
 
 // SetupRoutes configures auth and order routes
 func SetupRoutes(router *gin.Engine, db *gorm.DB, appCfg *config.AppConfig) {
-	authController := controllers.NewAuthController(db)
 	squareService := service.NewSquareService(db)
+	authController := controllers.NewAuthController(db, squareService)
 	orderController := controllers.NewOrderController(db, squareService)
 
 	// API versioning

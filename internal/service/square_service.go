@@ -36,6 +36,13 @@ func (ss *SquareService) getSquareClient(restaurantID uint) (*client.Client, err
 	return sqClient, nil
 }
 
+func (ss *SquareService) getSquareClientByToken(token string) *client.Client {
+    return client.NewClient(
+        option.WithToken(token),
+        option.WithBaseURL(square.Environments.Sandbox), // Use Production for live
+    )
+}
+
 // CreateOrder creates order in Square
 func (ss *SquareService) CreateOrder(restaurantID uint, orderRequest requests.CreateOrderRequest) (*square.Order, error) {
 	sqClient, err := ss.getSquareClient(restaurantID)
@@ -108,4 +115,20 @@ func (ss *SquareService) SubmitPayment(restaurantID uint, squareOrderID string, 
 	}
 
 	return response.Payment, nil
+}
+
+
+func (ss *SquareService) FetchLocationID(token string) (string, error) {
+	sqClient:= ss.getSquareClientByToken(token)
+
+    resp, err := sqClient.Locations.List(context.TODO())
+    if err != nil {
+        return "", err
+    }
+
+    if len(resp.Locations) == 0 {
+        return "", fmt.Errorf("no locations found")
+    }
+
+    return *resp.Locations[0].ID, nil 
 }
