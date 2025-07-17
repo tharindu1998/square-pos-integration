@@ -12,6 +12,7 @@ import (
     option "github.com/square/square-go-sdk/option"
     "gorm.io/driver/mysql"
     "gorm.io/gorm"
+    "square-pos-integration/internal/models"
 )
 
 // AppConfig holds the global application configuration
@@ -37,7 +38,7 @@ type Restaurant struct {
 
 // singleton instance for global config
 var (
-    appConfig *AppConfig
+    Config *AppConfig
     once      sync.Once
 )
 
@@ -59,8 +60,30 @@ func Init() *AppConfig {
         if err != nil {
             log.Fatalf("Failed to connect to DB: %v", err)
         }
+        // Auto-migrate models
+        if err := db.AutoMigrate(
+			&models.Restaurant{},
+			&models.User{},
+			&models.Order{},
+			&models.OrderItem{},
+			&models.OrderItemDiscount{},
+			&models.OrderItemModifier{},
+			&models.Payment{},
+		); err != nil {
+			log.Fatalf("auto‑migrate failed: %v", err)
+		}
 
-        appConfig = &AppConfig{
+        // Set up enums for MySQL
+        // Note: MySQL does not support enum types natively, so we use strings with constraints
+		if err := db.Exec(`
+			ALTER TABLE users     MODIFY role   ENUM('admin','manager','staff')      DEFAULT 'staff';
+			ALTER TABLE orders    MODIFY status ENUM('open','closed','cancelled')    DEFAULT 'open';
+			ALTER TABLE payments  MODIFY status ENUM('pending','paid','failed')      DEFAULT 'pending';
+		`).Error; err != nil {
+			log.Println("enum setup skipped:", err)
+		}
+
+        Config = &AppConfig{
             DB:        db,
             JWTSecret: jwtSecret,
             SquareConfig: SquareConfig{
@@ -69,12 +92,18 @@ func Init() *AppConfig {
             },
         }
     })
-    return appConfig
+    return Config
 }
 
 // NewSquareClient returns a Square client for the given access token and environment.
 // For multi-tenancy, pass the tenant's Square access token and environment.
 func NewSquareClient(accessToken, environment string) *client.Client {
+
+    // Fallbacks
+	if accessToken == "" {
+		panic("Square access token is required")
+	}
+
     var baseURL string
     switch environment {
     case "production":
@@ -88,22 +117,17 @@ func NewSquareClient(accessToken, environment string) *client.Client {
     )
 }
 
-// Example: ListLocations lists Square locations for a given tenant
+//lists Square locations for a given tenant
 func ListLocations(accessToken, environment string) error {
-    sqClient := NewSquareClient(accessToken, environment)
-    response, err := sqClient.Locations.List(context.TODO())
-    if err != nil {
-        return err
-    }
-    for _, l := range response.Locations {
-        fmt.Printf("ID: %s \n", *l.ID)
-        fmt.Printf("Name: %s \n", *l.Name)
-        if l.Address != nil {
-            fmt.Printf("Address: %s \n", *l.Address.AddressLine1)
-            fmt.Printf("%s \n", *l.Address.Locality)
-        }
-    }
-    return nil
+	sq := NewSquareClient(accessToken, environment)
+	resp, err := sq.Locations.List(context.TODO())
+	if err != nil {
+		return err
+	}
+	for _, l := range resp.Locations {
+		fmt.Printf("ID: %s | Name: %s\n", *l.ID, *l.Name)
+	}
+	return nil
 }
 
 

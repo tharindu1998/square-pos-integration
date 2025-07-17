@@ -1,14 +1,37 @@
 package models
 
 import(
-	"gorm.io/gorm"
 	"time"
+	"gorm.io/gorm"
 )
+
 type Payment struct {
-	gorm.Model
-	OrderID     uint   `json:"-"` // FK to Order
-	SquarePayID string `json:"payment_id"` 
-	BillAmount  int64  `json:"bill_amount"`
-	TipAmount   int64  `json:"tip_amount"`
-	PaidAt      time.Time `json:"paid_at"`
+	*gorm.Model
+	OrderID         string    `json:"order_id" gorm:"not null;size:255;index"`
+	RestaurantID    uint      `json:"restaurant_id" gorm:"not null;index"`
+	BillAmount      int       `json:"bill_amount" gorm:"not null"`               
+	TipAmount       int       `json:"tip_amount" gorm:"default:0"`               
+	TotalAmount     int       `json:"total_amount" gorm:"not null"`              
+	Status          string    `json:"status" gorm:"default:pending;size:50"`
+	PaymentMethod   string    `json:"payment_method" gorm:"size:50"`             
+	ProcessedAt     time.Time `json:"processed_at"`
+	RawSquareData   interface{} `json:"raw_square_data" gorm:"type:jsonb"` // Store complete Square response
+	
+	// Square specific fields for syncing
+	SquarePaymentID string `json:"square_payment_id" gorm:"size:255"`
+	SquareLocationID string `json:"square_location_id" gorm:"size:255"`
+	
+	// Additional fields for reporting
+	Currency        string `json:"currency" gorm:"default:USD;size:10"`
+	TransactionFee  int    `json:"transaction_fee" gorm:"default:0"` 
+	NetAmount       int    `json:"net_amount" gorm:"default:0"`      
+	
+	// Relationships
+	Order      Order      `json:"order,omitempty" gorm:"foreignKey:OrderID"`
+	Restaurant Restaurant `json:"restaurant,omitempty" gorm:"foreignKey:RestaurantID"`
+}
+
+// TableName returns the table name for Payment model
+func (Payment) TableName() string {
+	return "payments"
 }
