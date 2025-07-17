@@ -3,6 +3,7 @@ package models
 import(
 	"time"
 	"gorm.io/gorm"
+	"gorm.io/datatypes"
 )
 
 type Payment struct {
@@ -15,7 +16,7 @@ type Payment struct {
 	Status          string    `json:"status" gorm:"default:pending;size:50"`
 	PaymentMethod   string    `json:"payment_method" gorm:"size:50"`             
 	ProcessedAt     time.Time `json:"processed_at"`
-	RawSquareData   interface{} `json:"raw_square_data" gorm:"type:jsonb"` // Store complete Square response
+	RawSquareData datatypes.JSON `gorm:"type:json"`                            // Store complete Square response
 	
 	// Square specific fields for syncing
 	SquarePaymentID string `json:"square_payment_id" gorm:"size:255"`

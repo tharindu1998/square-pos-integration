@@ -57,6 +57,7 @@ type SubmitPaymentRequest struct {
 	LocationID      string  `json:"location_id" binding:"required"`
 	ReferenceID     string  `json:"reference_id,omitempty" binding:"omitempty,max=100"`
 	Note            string  `json:"note,omitempty" binding:"omitempty,max=500"`
+	PaymentMethod   string  `json:"payment_method" binding:"omitempty,oneof=cash card"`
 	AcceptPartialAuthorization bool    `json:"accept_partial_authorization,omitempty" binding:"omitempty"`
 	
 

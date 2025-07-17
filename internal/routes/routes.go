@@ -1,16 +1,16 @@
-package main
+package routes
 
 import (
 	"square-pos-integration/internal/controllers"
 	"square-pos-integration/internal/middleware"
 	"square-pos-integration/internal/service"
-	
+	"square-pos-integration/internal/config"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
 // SetupRoutes configures auth and order routes
-func SetupRoutes(router *gin.Engine, db *gorm.DB) {
+func SetupRoutes(router *gin.Engine, db *gorm.DB, appCfg *config.AppConfig) {
 	authController := controllers.NewAuthController(db)
 	squareService := service.NewSquareService(db)
 	orderController := controllers.NewOrderController(db, squareService)
