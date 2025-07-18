@@ -15,11 +15,11 @@ import(
 
 type AuthController struct {
 	DB            *gorm.DB
-	SquareService *service.SquareService
+	SquareService service.ISquareService
 }
 
 // NewAuthController creates a new auth controller
-func NewAuthController(db *gorm.DB, squareService *service.SquareService) *AuthController {
+func NewAuthController(db *gorm.DB, squareService service.ISquareService) *AuthController {
 	return &AuthController{DB: db, SquareService: squareService}
 }
 

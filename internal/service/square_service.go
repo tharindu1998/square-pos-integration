@@ -17,6 +17,12 @@ import (
 	"square-pos-integration/internal/utils"
 )
 
+// ISquareService defines the interface for Square-related operations.
+type ISquareService interface {
+	FetchLocationID(token string) (string, error)
+	// Add other method signatures as needed
+}
+
 type SquareService struct {
 	DB *gorm.DB
 }

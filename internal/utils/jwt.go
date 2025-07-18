@@ -22,7 +22,7 @@ type JWTClaims struct {
 }
 
 // GenerateJWT creates a new JWT token for the user
-func GenerateJWT(user models.User) (string, error) {
+var GenerateJWT = func(user models.User) (string, error) {
 	claims := JWTClaims{
 		UserID:       user.ID,
 		Email:        user.Email,
