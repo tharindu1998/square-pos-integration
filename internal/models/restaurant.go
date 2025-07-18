@@ -15,9 +15,10 @@ type Restaurant struct {
 	LocationID    string `json:"location_id" gorm:"not null"`                     
 
 
-	/* relationships */
+	//Relationships
 	Users []User `json:"-" gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
+// TableName returns the table name for Restaurant model
 func (Restaurant) TableName() string {
 	return "restaurants"
 }

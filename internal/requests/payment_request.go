@@ -57,7 +57,7 @@ type SubmitPaymentRequest struct {
 	PaymentMethod              string  `json:"payment_method" binding:"omitempty,oneof=cash card"`
 	AcceptPartialAuthorization bool    `json:"accept_partial_authorization,omitempty" binding:"omitempty"`
 }
-type ProcessPaymentRequest struct {
+type CompletePaymentRequest struct {
     BillAmount float64 `json:"billAmount" binding:"required,min=0"`
     TipAmount  float64 `json:"tipAmount" binding:"min=0"`
     PaymentID  string  `json:"paymentId" binding:"required"` // This is the Square source ID (card nonce)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -36,7 +35,7 @@ func (ss *SquareService) getSquareClient(restaurantID uint) (*client.Client, err
 	// Create Square client using the restaurant's access token
 	sqClient := client.NewClient(
 		option.WithToken(restaurant.SquareToken),
-		option.WithBaseURL(square.Environments.Sandbox), // or Production if you're live
+		option.WithBaseURL(square.Environments.Sandbox), // or Production for live
 	)
 
 	return sqClient, nil
@@ -106,7 +105,6 @@ func (ss *SquareService) CreateOrder(restaurantID uint, orderRequest requests.Cr
 		})
 	}
 
-	// Build order object
 	order := &square.Order{
 		LocationID:  orderRequest.LocationID,
 		LineItems:   lineItems,
@@ -120,7 +118,6 @@ func (ss *SquareService) CreateOrder(restaurantID uint, orderRequest requests.Cr
 		IdempotencyKey: square.String(idempotencyKey),
 	}
 
-	// Make the API call
 	response, err := sqClient.Orders.Create(context.TODO(), req)
 	if err != nil {
 		return nil, err
@@ -162,10 +159,9 @@ func (ss *SquareService) GetOrderDetails(restaurantID uint, squareOrderID string
 	return response.Order, nil
 }
 
-// In your SquareService
+// CreatePaymentIntent creates a payment intent in Square
 func (ss *SquareService) CreatePaymentIntent(restaurantID, squareOrderID string, paymentRequest requests.SubmitPaymentRequest) (*square.Payment, error) {
-	// Use Square's Create Payment API with intent_only or similar
-	// This creates the payment on Square's side but doesn't charge it
+
 	restaurantIDUint, err := strconv.ParseUint(restaurantID, 10, 64)
 	if err != nil {
 		return nil, fmt.Errorf("invalid restaurant ID: %w", err)
@@ -174,24 +170,18 @@ func (ss *SquareService) CreatePaymentIntent(restaurantID, squareOrderID string,
 	if err != nil {
 		return nil, err
 	}
-    timestamp := time.Now().Unix()
-    idempotencyKey := fmt.Sprintf("pay-%s-%d", squareOrderID[:8], timestamp)
-    
-    // Ensure it's under 45 characters
-    if len(idempotencyKey) > 45 {
-        idempotencyKey = idempotencyKey[:45]
-    }
+	idempotencyKey := "pay-" + uuid.NewString()
+
 	createPaymentRequest := &square.CreatePaymentRequest{
-		SourceID: utils.SafeString(&paymentRequest.SourceID), // card token, etc.
+		SourceID: utils.SafeString(&paymentRequest.SourceID),
 		AmountMoney: &square.Money{
 			Amount:   square.Int64(int64(paymentRequest.Amount * 100)),
-			Currency: square.Currency("USD").Ptr(), // or from order
+			Currency: square.Currency("USD").Ptr(),
 		},
-		OrderID: &squareOrderID,
+		OrderID:        &squareOrderID,
 		IdempotencyKey: idempotencyKey,
-		LocationID: &paymentRequest.LocationID,
-		// Add autocomplete: false to create intent without charging
-		Autocomplete: square.Bool(false),
+		LocationID:     &paymentRequest.LocationID,
+		Autocomplete:   square.Bool(false),
 	}
 
 	response, err := sqClient.Payments.Create(context.Background(), createPaymentRequest)
@@ -201,19 +191,60 @@ func (ss *SquareService) CreatePaymentIntent(restaurantID, squareOrderID string,
 
 	return response.Payment, nil
 }
-// CompletePayment completes a payment using Square's Payments API
-func (ss *SquareService) CompletePayment(restaurantID uint, squarePaymentID string) (*square.Payment, error) {
+
+func (ss *SquareService) CompletePayment(restaurantID uint, squarePaymentID string, tipAmount float64) (*square.Payment, error) {
 	sqClient, err := ss.getSquareClient(restaurantID)
 	if err != nil {
 		return nil, err
 	}
+	if tipAmount > 0 {
+		// Generate idempotency key for update request
+		idempotencyKey := "tip-" + uuid.NewString()
 
-	response, err := sqClient.Payments.Complete(context.Background(), &square.CompletePaymentRequest{
+		// First, update the payment with tip amount
+		updateRequest := &square.UpdatePaymentRequest{
+			PaymentID: squarePaymentID,
+			Payment: &square.Payment{
+				TipMoney: &square.Money{
+					Amount:   square.Int64(int64(tipAmount * 100)),
+					Currency: square.Currency("USD").Ptr(),
+				},
+			},
+			IdempotencyKey: idempotencyKey,
+		}
+
+		_, err := sqClient.Payments.Update(context.Background(), updateRequest)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update payment with tip: %w", err)
+		}
+	}
+
+	// Build the complete payment request
+	completeRequest := &square.CompletePaymentRequest{
 		PaymentID: squarePaymentID,
-	})
+	}
+
+	response, err := sqClient.Payments.Complete(context.Background(), completeRequest)
 	if err != nil {
 		return nil, err
 	}
 
 	return response.Payment, nil
 }
+
+// CompletePayment completes a payment using Square's Payments API
+// func (ss *SquareService) CompletePayment(restaurantID uint, squarePaymentID string) (*square.Payment, error) {
+// 	sqClient, err := ss.getSquareClient(restaurantID)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	response, err := sqClient.Payments.Complete(context.Background(), &square.CompletePaymentRequest{
+// 		PaymentID: squarePaymentID,
+// 	})
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	return response.Payment, nil
+// }

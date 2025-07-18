@@ -15,11 +15,11 @@ type OrderItem struct {
 	Amount    int    `json:"amount" gorm:"not null"` 
 	
 	
-	// Square specific fields for syncing
+	// Square specific fields
 	SquareItemID string `json:"square_item_id" gorm:"size:255"`
 	SquareUID    string `json:"square_uid" gorm:"size:255"`
 
-	/* relationships */
+	//Relationships
 	Order      Order               `json:"-" gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	Discounts  []OrderItemDiscount `json:"discounts" gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	Modifiers  []OrderItemModifier `json:"modifiers" gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`

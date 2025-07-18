@@ -15,6 +15,7 @@ type Table struct {
 	Restaurant Restaurant `json:"restaurant,omitempty" gorm:"foreignKey:RestaurantID;references:ID"`
 	Orders     []Order    `json:"orders,omitempty" gorm:"foreignKey:TableID;constraint:OnDelete:SET NULL"`
 }
+// TableName returns the table name for Table model
 func (Table) TableName() string {
 	return "tables"
 }
