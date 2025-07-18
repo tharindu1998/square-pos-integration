@@ -3,10 +3,10 @@ A multi-tenant backend REST API written in Go, designed to integrate with Square
 
 # Prerequisites
 
--Go 1.19 or higher
--MySQL 5.7 or higher
--Square Developer Account
--Square Application ID and credentials
+- Go 1.19 or higher
+- MySQL 5.7 or higher
+- Square Developer Account
+- Square Application ID and credentials
 
 # Installation
 
