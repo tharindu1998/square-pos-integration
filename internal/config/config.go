@@ -78,7 +78,7 @@ func Init() *AppConfig {
 			log.Println("users enum setup skipped:", err)
 		}
 
-		if err := db.Exec(`ALTER TABLE orders MODIFY status ENUM('open','closed','cancelled') DEFAULT 'open'`).Error; err != nil {
+		if err := db.Exec(`ALTER TABLE orders MODIFY status ENUM('open', 'closed', 'cancelled', 'pending') DEFAULT 'open'`).Error; err != nil {
 			log.Println("orders enum setup skipped:", err)
 		}
 
