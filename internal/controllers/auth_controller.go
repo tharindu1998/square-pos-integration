@@ -1,16 +1,16 @@
 package controllers
 
-import(
-	"net/http"
+import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"log"
+	"net/http"
 	"strings"
 
 	"square-pos-integration/internal/models"
 	"square-pos-integration/internal/requests"
-	"square-pos-integration/internal/utils"
 	"square-pos-integration/internal/service"
-	
+	"square-pos-integration/internal/utils"
 )
 
 type AuthController struct {
@@ -25,6 +25,8 @@ func NewAuthController(db *gorm.DB, squareService service.ISquareService) *AuthC
 
 // Login handles user authentication
 func (ac *AuthController) Login(c *gin.Context) {
+	log.Printf("Login attempt for IP: %s", c.ClientIP())
+
 	var loginRequest requests.LoginRequest
 	if err := c.ShouldBindJSON(&loginRequest); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -51,6 +53,8 @@ func (ac *AuthController) Login(c *gin.Context) {
 		return
 	}
 
+	log.Printf("Successful login for user: %s (ID: %d)", loginRequest.Email, user.ID)
+
 	c.JSON(http.StatusOK, gin.H{
 		"token": token,
 	})
@@ -58,6 +62,8 @@ func (ac *AuthController) Login(c *gin.Context) {
 
 // Register creates a new user (only admin can register users for their restaurant)
 func (ac *AuthController) Register(c *gin.Context) {
+	log.Printf("User registration attempt by IP: %s", c.ClientIP())
+
 	var registerRequest requests.RegisterUserRequest
 
 	if err := c.ShouldBindJSON(&registerRequest); err != nil {
@@ -94,13 +100,21 @@ func (ac *AuthController) Register(c *gin.Context) {
 	if err := ac.DB.Create(&user).Error; err != nil {
 		// Check for duplicate email in same restaurant
 		if strings.Contains(err.Error(), "unique_email_restaurant") {
+
+			log.Printf("Duplicate email registration attempt: %s for restaurant ID: %d", registerRequest.Email, restaurantID)
+
 			c.JSON(http.StatusConflict, gin.H{"error": "Email already exists for this restaurant"})
 			return
 		}
+
+		log.Printf("User creation failed for email: %s, error: %v", registerRequest.Email, err)
+
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}
 	ac.DB.Preload("Restaurant").First(&user, user.ID)
+
+	log.Printf("User created successfully: %s (ID: %d)", user.Email, user.ID)
 
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "User created successfully",
@@ -118,11 +132,15 @@ func (ac *AuthController) GetProfile(c *gin.Context) {
 		return
 	}
 
+	log.Printf("Profile retrieved successfully for user: %s (ID: %d)", user.Email, user.ID)
+
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
 // RegisterRestaurant handles restaurant registration (public endpoint)
 func (ac *AuthController) RegisterRestaurant(c *gin.Context) {
+	log.Printf("Restaurant registration attempt from IP: %s", c.ClientIP())
+
 	var restaurantRequest requests.RegisterRestaurantRequest
 
 	if err := c.ShouldBindJSON(&restaurantRequest); err != nil {
@@ -144,9 +162,14 @@ func (ac *AuthController) RegisterRestaurant(c *gin.Context) {
 
 	if err := ac.DB.Create(&restaurant).Error; err != nil {
 		if strings.Contains(err.Error(), "square_app_id") {
+			
+			log.Printf("Duplicate Square App ID registration attempt: %s", restaurantRequest.SquareAppID)
+			
 			c.JSON(http.StatusConflict, gin.H{"error": "Square App ID already exists"})
 			return
 		}
+		log.Printf("Restaurant creation failed for name: %s, error: %v", restaurantRequest.Name, err)
+
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create restaurant"})
 		return
 	}
@@ -167,9 +190,14 @@ func (ac *AuthController) RegisterRestaurant(c *gin.Context) {
 	}
 
 	if err := ac.DB.Create(&adminUser).Error; err != nil {
+		log.Printf("Admin user creation failed for restaurant: %s, admin email: %s, error: %v", restaurantRequest.Name, restaurantRequest.AdminEmail, err)
+
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create admin user"})
 		return
 	}
+
+	log.Printf("Restaurant registration completed successfully: %s (ID: %d) with admin user: %s (ID: %d)",
+		restaurantRequest.Name, restaurant.ID, restaurantRequest.AdminEmail, adminUser.ID)
 
 	c.JSON(http.StatusCreated, gin.H{
 		"message":    "Restaurant registered successfully",
