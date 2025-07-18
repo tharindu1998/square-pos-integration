@@ -40,7 +40,9 @@ func SetupRoutes(router *gin.Engine, db *gorm.DB, appCfg *config.AppConfig) {
 
 			// Payment routes
 			protected.POST("/payment/:id/payment-intent", paymentController.CreatePaymentIntent)
-			protected.POST("/payment/:id/complete", paymentController.CompletePayment)
+			// protected.POST("/payment/:id/complete", paymentController.CompletePayment)
+			protected.POST("/payment/complete", paymentController.CompletePayment)
+
 			
 			// Admin only routes
 			admin := protected.Group("/admin")

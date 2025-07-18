@@ -18,24 +18,22 @@ type Order struct {
 	IsClosed      bool           `json:"is_closed" gorm:"default:false;index"`
 	Status        string         `json:"status" gorm:"default:open;size:100"`
 	UserID        uint           `json:"user_id" gorm:"not null;index"`
-	TotalAmount   int64          `json:"total_amount" gorm:"not null;default:0"` // Total amount in cents
+	TotalAmount   int64          `json:"total_amount" gorm:"not null;default:0"` 
 	Currency      string         `json:"currency" gorm:"not null;size:3;default:'USD'"`
-	LocationID    string         `json:"location_id" gorm:"not null;size:255"` // Square location
-	RawSquareData datatypes.JSON `gorm:"type:json"`                            // Store complete Square response
-	PayedAmount   int64          `json:"paid_amount" gorm:"default:0"`         // Total paid amount in cents
-	TipAmount     int64          `json:"tip_amount" gorm:"default:0"`          // Add this field - tip amount in cents
+	LocationID    string         `json:"location_id" gorm:"not null;size:255"` 
+	RawSquareData datatypes.JSON `gorm:"type:json"`                            
+	PayedAmount   int64          `json:"paid_amount" gorm:"default:0"`         
+	TipAmount     int64          `json:"tip_amount" gorm:"default:0"`          
 
-	// Totals - embedded struct for order totals
 	Totals OrderTotals `json:"totals" gorm:"embedded"`
 
-	/* relationships */
+	//Relationships
 	Restaurant Restaurant  `json:"restaurant,omitempty" gorm:"foreignKey:RestaurantID;references:ID"`
 	Table      Table       `json:"table,omitempty" gorm:"foreignKey:TableID;references:ID"`
 	Items      []OrderItem `json:"items,omitempty" gorm:"foreignKey:OrderID;constraint:OnDelete:CASCADE"`
 	Payments   []Payment   `json:"payments,omitempty" gorm:"foreignKey:OrderID;constraint:OnDelete:CASCADE"`
 }
 
-// OrderTotals represents order totals
 type OrderTotals struct {
 	Discounts     int `json:"discounts" gorm:"default:0"`
 	Due           int `json:"due" gorm:"default:0"`
