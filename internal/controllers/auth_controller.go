@@ -9,16 +9,18 @@ import(
 	"square-pos-integration/internal/models"
 	"square-pos-integration/internal/requests"
 	"square-pos-integration/internal/utils"
+	"square-pos-integration/internal/service"
 	
 )
 
 type AuthController struct {
-	DB *gorm.DB
+	DB            *gorm.DB
+	SquareService *service.SquareService
 }
 
 // NewAuthController creates a new auth controller
-func NewAuthController(db *gorm.DB) *AuthController {
-	return &AuthController{DB: db}
+func NewAuthController(db *gorm.DB, squareService *service.SquareService) *AuthController {
+	return &AuthController{DB: db, SquareService: squareService}
 }
 
 // Login handles user authentication
@@ -51,7 +53,6 @@ func (ac *AuthController) Login(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"token": token,
-		"user":  user,
 	})
 }
 
@@ -87,6 +88,7 @@ func (ac *AuthController) Register(c *gin.Context) {
 		PasswordHash: hashedPassword,
 		RestaurantID: restaurantID.(uint),
 		Role:         registerRequest.Role,
+		Username:     registerRequest.Username,
 	}
 
 	if err := ac.DB.Create(&user).Error; err != nil {
@@ -98,6 +100,7 @@ func (ac *AuthController) Register(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}
+	ac.DB.Preload("Restaurant").First(&user, user.ID)
 
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "User created successfully",
@@ -126,12 +129,17 @@ func (ac *AuthController) RegisterRestaurant(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
+	locationID, err := ac.SquareService.FetchLocationID(restaurantRequest.SquareToken)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch Square location ID"})
+		return
+	}
 	// Create restaurant
 	restaurant := models.Restaurant{
 		Name:        restaurantRequest.Name,
 		SquareAppID: restaurantRequest.SquareAppID,
 		SquareToken: restaurantRequest.SquareToken,
+		LocationID:  locationID,
 	}
 
 	if err := ac.DB.Create(&restaurant).Error; err != nil {

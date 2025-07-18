@@ -11,9 +11,10 @@ import (
 
 // SetupRoutes configures auth and order routes
 func SetupRoutes(router *gin.Engine, db *gorm.DB, appCfg *config.AppConfig) {
-	authController := controllers.NewAuthController(db)
 	squareService := service.NewSquareService(db)
+	authController := controllers.NewAuthController(db, squareService)
 	orderController := controllers.NewOrderController(db, squareService)
+	paymentController:= controllers.NewPaymentController(db, squareService)
 
 	// API versioning
 	v1 := router.Group("/api/v1")
@@ -36,7 +37,10 @@ func SetupRoutes(router *gin.Engine, db *gorm.DB, appCfg *config.AppConfig) {
 			protected.POST("/orders", orderController.CreateOrder)
 			protected.GET("/orders/table/:table_number", orderController.GetOrderByTableNumber)
 			protected.GET("/orders/:id", orderController.GetOrderByID)
-			protected.POST("/orders/:id/payment", orderController.SubmitPayment)
+
+			// Payment routes
+			protected.POST("/payment/:id/payment-intent", paymentController.CreatePaymentIntent)
+			protected.POST("/payment/:id/complete", paymentController.CompletePayment)
 			
 			// Admin only routes
 			admin := protected.Group("/admin")

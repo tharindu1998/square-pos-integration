@@ -1,6 +1,7 @@
 package utils
 
 import (
+
 	"strconv"
 	"github.com/square/square-go-sdk/v2"
 )
@@ -30,4 +31,26 @@ func ParseQuantity(q string) int {
 	i, _ := strconv.Atoi(q) // You may want error handling here
 	return i
 }
+
+func FindDiscountByUID(discounts []*square.OrderLineItemDiscount, uid string) *square.OrderLineItemDiscount {
+	if discounts == nil {
+		return nil
+	}
+
+	for _, discount := range discounts {
+		if SafeString(discount.UID) == uid {
+			return discount
+		}
+	}
+	return nil
+}
+
+func Float64ToInt64Ptr(f *float64) *int64 {
+    if f == nil {
+        return nil
+    }
+    i := int64(*f)
+    return &i
+}
+
 
